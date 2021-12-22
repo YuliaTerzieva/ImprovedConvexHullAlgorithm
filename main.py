@@ -17,14 +17,83 @@ SShaped = [(893, 2114), (4513, 3711), (4878, 3453), (5213, 3179), (5578, 2905), 
 
 Dantzig = [(2100, 600), (6900, 5400), (5700, 4200), (4500, 3000), (5700, 3000), (6300, 3000), (6900, 3000),
            (3300, 1800), (2100, 5400), (6900, 600)]
+SmallExample = [(10, 10), (20, 20), (30, 25), (40, 25), (80, 60), (90, 70), (97, 77), (100, 80), (40, 90)]
 
-WorkCoordinates = SShaped
-# --------------- Slopes between lines ---------------#
-slopes = np.array([["{:.2f}".format((a[1]-b[1])/(a[0]-b[0])) if a[0]!=b[0] else None for a in WorkCoordinates]
-                   for b in WorkCoordinates])
+WorkCoordinates = SmallExample
 
-print(slopes)
+# --------------- Our algorithm good continuation ---------------#
+def distancePointFromLine(point1L, point2L, point):
+    x1 = point1L[0]
+    y1 = point1L[1]
+    x2 = point2L[0]
+    y2 = point2L[1]
+    x0 = point[0]
+    y0 = point[1]
+    topPart = abs((x2 - x1)*(y1-y0) - (x1 - x0)*(y2-y1))
+    bottomPart = math.sqrt((x2-x1)**2 + (y2-y1)**2)
+    return topPart/bottomPart
 
+
+def getPathsGivenStartingPoint(Points, startingPointIndex, maxDistance, distances) :
+    ClosestPointDistance = min(distances[startingPointIndex])
+    ClosestPointIndex = distances[startingPointIndex].index(ClosestPointDistance)
+
+    list = []
+    list.extend([startingPointIndex, ClosestPointIndex])
+    while ClosestPointDistance < maxDistance :
+        distancesRest = [(distancePointFromLine(Points[startingPointIndex], Points[ClosestPointIndex], Points[i]), i)
+                         if i not in list else (maxDistance+1, -1) for i in range(len(Points))]
+        distancesRestMin = min(distancesRest, key = lambda t: t[0])
+        if distancesRestMin[0] < maxDistance :
+            list.append(distancesRestMin[1])
+            ClosestPointDistance = distancesRestMin[0]
+            ClosestPointIndex = distancesRestMin[1]
+        else :
+            return list
+    return list.sort()
+
+
+def getAllSets(Points, minNumberElement, maxDistance):
+    allLists = []
+    distances = [[distance.euclidean(a, b) for a in WorkCoordinates] for b in WorkCoordinates]
+    for startingPointIndex in range(len(Points)) :
+        list = getPathsGivenStartingPoint(Points, startingPointIndex, maxDistance, distances)
+        if len(list) >= minNumberElement :
+            if list not in allLists :
+                allLists.append(list)
+    return allLists
+
+print(getAllSets(WorkCoordinates, 3, 5))
+# --------------- Slopes between lines algorithm ---------------#
+# slopes = np.array([[(a[1] - b[1]) / (a[0] - b[0]) if a[0] != b[0] else None for a in WorkCoordinates]
+#                    for b in WorkCoordinates])
+#
+# distances = np.array([[math.dist(a, b) for a in WorkCoordinates]
+#                       for b in WorkCoordinates])
+# # print(slopes)
+# # print(distances)
+#
+# maxDifference = 0.001
+# minElements = 3
+# maxDist = 3
+#
+# groups = []
+# for i, row in enumerate(slopes):
+#     similar = []
+#     for j in range(len(WorkCoordinates)):
+#         similarInt = []
+#         for k in range(len(WorkCoordinates)):
+#             if j != k and slopes[i][j] is not None and slopes[j][k] is not None:
+#                 if abs(slopes[i][j] - slopes[j][k]) < maxDifference:
+#                     similarInt.append(k)
+#         if len(similarInt) > minElements - 1:
+#             similarInt.append(j)
+#             if similarInt.sort() not in similar:
+#                 similar.append(similarInt.sort())
+#     groups.append(similar)
+#
+# for g in groups:
+#     print(g)
 
 # # --------------- Step 1 : Boundary Points Initialization ---------------#
 # x_min = (min(WorkCoordinates, key=lambda t: t[0]))[0]

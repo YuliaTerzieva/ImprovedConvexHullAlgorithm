@@ -18,8 +18,10 @@ SShaped = [(893, 2114), (4513, 3711), (4878, 3453), (5213, 3179), (5578, 2905), 
 Dantzig = [(2100, 600), (6900, 5400), (5700, 4200), (4500, 3000), (5700, 3000), (6300, 3000), (6900, 3000),
            (3300, 1800), (2100, 5400), (6900, 600)]
 SmallExample = [(10, 10), (20, 20), (30, 25), (40, 25), (80, 60), (90, 70), (97, 77), (100, 80), (40, 90)]
+CircleExample = [(2, 1), (3, 0), (5, 0), (6, 1), (6, 2), (5, 4), (3, 4), (2, 3), (4, 2)]
 
 WorkCoordinates = SmallExample
+
 
 # --------------- Our algorithm good continuation ---------------#
 def distancePointFromLine(point1L, point2L, point):
@@ -29,41 +31,68 @@ def distancePointFromLine(point1L, point2L, point):
     y2 = point2L[1]
     x0 = point[0]
     y0 = point[1]
-    topPart = abs((x2 - x1)*(y1-y0) - (x1 - x0)*(y2-y1))
-    bottomPart = math.sqrt((x2-x1)**2 + (y2-y1)**2)
-    return topPart/bottomPart
+    topPart = abs((x2 - x1) * (y1 - y0) - (x1 - x0) * (y2 - y1))
+    bottomPart = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    return topPart / bottomPart
 
 
-def getPathsGivenStartingPoint(Points, startingPointIndex, maxDistance, distances) :
+def getPathsGivenStartingPoint(Points, startingPointIndex, maxDistanceFromLine, maxDistanceBetweenPoints, distances):
     ClosestPointDistance = min(distances[startingPointIndex])
     ClosestPointIndex = distances[startingPointIndex].index(ClosestPointDistance)
+    # print(ClosestPointDistance, ClosestPointIndex)
+    # print("======================== Starting point ", startingPointIndex, "has closest", ClosestPointIndex,
+    #       "with distance", ClosestPointDistance)
 
     list = []
     list.extend([startingPointIndex, ClosestPointIndex])
-    while ClosestPointDistance < maxDistance :
+    while ClosestPointDistance < maxDistanceBetweenPoints:
         distancesRest = [(distancePointFromLine(Points[startingPointIndex], Points[ClosestPointIndex], Points[i]), i)
-                         if i not in list else (maxDistance+1, -1) for i in range(len(Points))]
-        distancesRestMin = min(distancesRest, key = lambda t: t[0])
-        if distancesRestMin[0] < maxDistance :
+                         if i not in list else (maxDistanceFromLine + 1, -1) for i in range(len(Points))]
+        # print(distancesRest)
+        distancesRestMin = min(distancesRest, key=lambda t: t[0])
+        if distancesRestMin[0] < maxDistanceFromLine and \
+                distances[startingPointIndex][distancesRestMin[1]] < maxDistanceBetweenPoints:
+            # print("the next closest is ", distancesRestMin[1], "with distance", distancesRestMin[0])
             list.append(distancesRestMin[1])
-            ClosestPointDistance = distancesRestMin[0]
             ClosestPointIndex = distancesRestMin[1]
-        else :
+            ClosestPointDistance = distances[startingPointIndex][ClosestPointIndex]
+        else:
             return list
-    return list.sort()
+        # print(ClosestPointDistance, ClosestPointIndex)
+    return list
 
 
-def getAllSets(Points, minNumberElement, maxDistance):
+def getAllSets(Points, distances, minNumberElement, maxDistanceFromLine, maxDistanceBetweenPoints):
     allLists = []
-    distances = [[distance.euclidean(a, b) for a in WorkCoordinates] for b in WorkCoordinates]
-    for startingPointIndex in range(len(Points)) :
-        list = getPathsGivenStartingPoint(Points, startingPointIndex, maxDistance, distances)
-        if len(list) >= minNumberElement :
-            if list not in allLists :
+
+    for startingPointIndex in range(len(Points)):
+        list = getPathsGivenStartingPoint(Points, startingPointIndex, maxDistanceFromLine, maxDistanceBetweenPoints,
+                                          distances)
+        list.sort()
+        if len(list) >= minNumberElement:
+            if list not in allLists:
                 allLists.append(list)
     return allLists
 
-print(getAllSets(WorkCoordinates, 3, 5))
+
+distances = [[distance.euclidean(a, b) if a != b else 10000000000000000000 for a in WorkCoordinates] for b in
+             WorkCoordinates]
+mean = np.array(WorkCoordinates).mean()
+# when working with the big examples use the mean, otherwise 15 seem fine for out example (small)
+sets = getAllSets(WorkCoordinates, distances, 3, 10, 15)
+print(sets)
+
+
+def plotResults(WorkCoordinates, sets):
+    plt.scatter(*zip(*WorkCoordinates))
+    for set in sets :
+        x = [WorkCoordinates[i][0] for i in set]
+        y = [WorkCoordinates[i][1] for i in set]
+        plt.plot(x, y, 'r-')
+    plt.show()
+
+
+plotResults(WorkCoordinates, sets)
 # --------------- Slopes between lines algorithm ---------------#
 # slopes = np.array([[(a[1] - b[1]) / (a[0] - b[0]) if a[0] != b[0] else None for a in WorkCoordinates]
 #                    for b in WorkCoordinates])

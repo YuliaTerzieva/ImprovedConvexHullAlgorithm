@@ -12,7 +12,7 @@ CrossingCoord = [(500, 100), (500, 6200), (10000, 6200), (10000, 100), (4350, 62
 PlaiserTakCoord = [(750, 500), (4500, 500), (8250, 500), (4500, 1125), (4500, 1750), (4500, 2375), (4500, 3000),
                    (4500, 3625), (750, 5500), (8250, 5500)]
 
-SShaped = [(893, 2114), (4513, 3711), (4878, 3453), (5213, 3179), (5578, 2905), (928, 2631), (6232, 2418),
+SShaped = [(893, 2114), (4513, 3711), (4878, 3453), (5213, 3179), (5578, 2905), (5928, 2631), (6232, 2418),
            (6628, 2099), (6993, 1840), (7342, 1764), (7707, 1840), (7966, 2069)]
 
 Dantzig = [(2100, 600), (6900, 5400), (5700, 4200), (4500, 3000), (5700, 3000), (6300, 3000), (6900, 3000),
@@ -20,7 +20,7 @@ Dantzig = [(2100, 600), (6900, 5400), (5700, 4200), (4500, 3000), (5700, 3000), 
 SmallExample = [(10, 10), (20, 20), (30, 25), (40, 25), (80, 60), (90, 70), (97, 77), (100, 80), (40, 90)]
 CircleExample = [(2, 1), (3, 0), (5, 0), (6, 1), (6, 2), (5, 4), (3, 4), (2, 3), (4, 2)]
 
-WorkCoordinates = SmallExample
+WorkCoordinates = Dantzig
 
 
 # --------------- Our algorithm good continuation ---------------#
@@ -34,6 +34,13 @@ def distancePointFromLine(point1L, point2L, point):
     topPart = abs((x2 - x1) * (y1 - y0) - (x1 - x0) * (y2 - y1))
     bottomPart = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     return topPart / bottomPart
+
+
+def findIntersectingList(allLists, list):
+    for i, workingList in enumerate(allLists):
+        if len(set(workingList).intersection(list)) != 0:
+            return i
+    return -1
 
 
 def getPathsGivenStartingPoint(Points, startingPointIndex, maxDistanceFromLine, maxDistanceBetweenPoints, distances):
@@ -66,12 +73,26 @@ def getAllSets(Points, distances, minNumberElement, maxDistanceFromLine, maxDist
     allLists = []
 
     for startingPointIndex in range(len(Points)):
-        list = getPathsGivenStartingPoint(Points, startingPointIndex, maxDistanceFromLine, maxDistanceBetweenPoints,
+        listToAppend = getPathsGivenStartingPoint(Points, startingPointIndex, maxDistanceFromLine, maxDistanceBetweenPoints,
                                           distances)
-        list.sort()
-        if len(list) >= minNumberElement:
-            if list not in allLists:
-                allLists.append(list)
+
+        if len(listToAppend) >= minNumberElement:
+            listToAppend.sort()
+            if listToAppend not in allLists:
+                # Def function check if there is intersection with another list and if there is return the
+                # number of the list where there is intersection
+                position = findIntersectingList(allLists, listToAppend)
+                # print("Current total list is ", allLists)
+                # print("The list to e added is ", listToAppend)
+                # print("position is", position)
+                if position != -1:
+                    newSet = set(allLists[position] + listToAppend)
+                    newList = list(newSet)
+                    allLists.remove(allLists[position])
+                    allLists.append(newList)
+
+                else :
+                    allLists.append(listToAppend)
     return allLists
 
 
@@ -79,18 +100,18 @@ distances = [[distance.euclidean(a, b) if a != b else 10000000000000000000 for a
              WorkCoordinates]
 mean = np.array(WorkCoordinates).mean()
 # when working with the big examples use the mean, otherwise 15 seem fine for out example (small)
-sets = getAllSets(WorkCoordinates, distances, 3, 10, 15)
+sets = getAllSets(WorkCoordinates, distances, 3, 10, mean)  # 15)
+
 print(sets)
 
 
 def plotResults(WorkCoordinates, sets):
     plt.scatter(*zip(*WorkCoordinates))
-    for set in sets :
+    for set in sets:
         x = [WorkCoordinates[i][0] for i in set]
         y = [WorkCoordinates[i][1] for i in set]
-        plt.plot(x, y, 'r-')
+        plt.plot(x, y, '-')
     plt.show()
-
 
 plotResults(WorkCoordinates, sets)
 # --------------- Slopes between lines algorithm ---------------#
